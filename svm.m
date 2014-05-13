@@ -1,4 +1,4 @@
-function [precision, recall, cmat] = svm(numOfReturnedImgs, dataset, queryImageFeatureVector, metric)
+function [precision, recall, cmat] = svm(numOfReturnedImgs, dataset, queryImageFeatureVector, metric, folder_name, img_ext)
 %# load dataset and extract image names
 img_names = dataset(:, end);
 dataset(:, end) = [];
@@ -101,6 +101,6 @@ imgsInClassXWithoutLbls = imgsInClassX;
 imgsInClassXWithoutLbls(:, end) = [];
 % imgsInClassXWithoutLbls(:, end) = [];
 
-L2(numOfReturnedImgs, [queryImageFeatureVector query_img_name], imgsInClassXWithoutLbls, metric);
+L2(numOfReturnedImgs, [queryImageFeatureVector query_img_name], imgsInClassXWithoutLbls, metric, folder_name, img_ext);
 
 end

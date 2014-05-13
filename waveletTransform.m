@@ -1,10 +1,14 @@
-function waveletMoments = waveletTransform(image)
+function waveletMoments = waveletTransform(image, spaceColor)
 % input: image to process and extract wavelet coefficients from
 % output: 1x20 feature vector containing the first 2 moments of wavelet
 % coefficients
 
-imgGray = double(rgb2gray(image))/255;
-imgGray = imresize(imgGray, [256 256]);
+if (strcmp(spaceColor, 'truecolor') == 1)
+    imgGray = double(rgb2gray(image))/255;
+    imgGray = imresize(imgGray, [256 256]);
+elseif (strcmp(spaceColor, 'grayscale') == 1)
+    imgGray = imresize(image, [256 256]);
+end
 
 coeff_1 = dwt2(imgGray', 'coif1');
 coeff_2 = dwt2(coeff_1, 'coif1');

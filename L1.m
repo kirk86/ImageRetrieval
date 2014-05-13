@@ -1,4 +1,4 @@
-function L1(numOfReturnedImages, queryImageFeatureVector, dataset)
+function L1(numOfReturnedImages, queryImageFeatureVector, dataset, folder_name, img_ext)
 % input:
 %   numOfReturnedImages : num of images returned by query
 %   queryImageFeatureVector: query image in the form of a feature vector
@@ -35,7 +35,7 @@ arrayfun(@cla, findall(0, 'type', 'axes'));
 
 % display query image
 str_name = int2str(query_image_name);
-queryImage = imread( strcat('images\', str_name, '.jpg') );
+queryImage = imread( strcat(folder_name, '\', str_name, img_ext) );
 subplot(3, 7, 1);
 imshow(queryImage, []);
 title('Query Image', 'Color', [1 0 0]);
@@ -44,7 +44,7 @@ title('Query Image', 'Color', [1 0 0]);
 for m = 1:numOfReturnedImages
     img_name = sortedImgs(m);
     img_name = int2str(img_name);
-    str_name = strcat('images\', img_name, '.jpg');
+    str_name = strcat(folder_name, '\', img_name, img_ext);
     returnedImage = imread(str_name);
     subplot(3, 7, m+1);
     imshow(returnedImage, []);

@@ -1,4 +1,4 @@
-function relativeDeviation(numOfReturnedImages, queryImageFeatureVector, dataset)
+function relativeDeviation(numOfReturnedImages, queryImageFeatureVector, dataset, folder_name, img_ext)
 % input:
 %   numOfReturnedImages : num of images returned by query
 %   queryImageFeatureVector: query image in the form of a feature vector
@@ -33,7 +33,7 @@ arrayfun(@cla, findall(0, 'type', 'axes'));
 
 % display query image
 str_img_name = int2str(query_im_name);
-query_im = imread( strcat('images\', str_img_name, '.jpg') );
+query_im = imread( strcat(folder_name, '\', str_img_name, img_ext) );
 subplot(3, 7, 1);
 imshow(query_im, []);
 title('Query Image', 'Color', [1 0 0]);
@@ -42,7 +42,7 @@ title('Query Image', 'Color', [1 0 0]);
 for m = 1:numOfReturnedImages
     im_name = sortedRelImgs(m);
     im_name = int2str(im_name);
-    str_im_name = strcat('images\', im_name, '.jpg');
+    str_im_name = strcat(folder_name, '\', im_name, img_ext);
     returned_im = imread(str_im_name);
     subplot(3, 7, m+1);
     imshow(returned_im, []);

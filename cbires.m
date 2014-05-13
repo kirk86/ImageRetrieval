@@ -83,6 +83,7 @@ function btn_BrowseImage_Callback(hObject, eventdata, handles)
 
 if (query_fname ~= 0)
     query_fullpath = strcat(query_pathname, query_fname);
+    imgInfo = imfinfo(query_fullpath);
     [pathstr, name, ext] = fileparts(query_fullpath); % fiparts returns char type
     
     if ( strcmp(lower(ext), '.jpg') == 1 || strcmp(lower(ext), '.png') == 1 ...
@@ -94,18 +95,31 @@ if (query_fname ~= 0)
         
         % extract query image features
         queryImage = imresize(queryImage, [384 256]);
-        hsvHist = hsvHistogram(queryImage);
-        autoCorrelogram = colorAutoCorrelogram(queryImage);
-        color_moments = colorMoments(queryImage);
-        % for gabor filters we need gary scale image
-        img = double(rgb2gray(queryImage))/255;
-        [meanAmplitude, msEnergy] = gaborWavelet(img, 4, 6); % 4 = number of scales, 6 = number of orientations
-        wavelet_moments = waveletTransform(queryImage);
-        % construct the queryImage feature vector
-        queryImageFeature = [hsvHist autoCorrelogram color_moments meanAmplitude msEnergy wavelet_moments str2num(name)];
+        if (strcmp(imgInfo.ColorType, 'truecolor') == 1)
+            hsvHist = hsvHistogram(queryImage);
+            autoCorrelogram = colorAutoCorrelogram(queryImage);
+            color_moments = colorMoments(queryImage);
+            % for gabor filters we need gary scale image
+            img = double(rgb2gray(queryImage))/255;
+            [meanAmplitude, msEnergy] = gaborWavelet(img, 4, 6); % 4 = number of scales, 6 = number of orientations
+            wavelet_moments = waveletTransform(queryImage, imgInfo.ColorType);
+            % construct the queryImage feature vector
+            queryImageFeature = [hsvHist autoCorrelogram color_moments meanAmplitude msEnergy wavelet_moments str2num(name)];
+        elseif (strcmp(imgInfo.ColorType, 'grayscale') == 1)
+            grayHist = imhist(queryImage);
+            grayHist = grayHist/sum(grayHist);
+            grayHist = grayHist(:)';
+            color_moments = [mean(mean(queryImage)) std(std(double(queryImage)))];
+            [meanAmplitude, msEnergy] = gaborWavelet(queryImage, 4, 6); % 4 = number of scales, 6 = number of orientations
+            wavelet_moments = waveletTransform(queryImage, imgInfo.ColorType);
+            % construct the queryImage feature vector
+            queryImageFeature = [grayHist color_moments meanAmplitude msEnergy wavelet_moments str2num(name)];
+        end
         
         % update handles
         handles.queryImageFeature = queryImageFeature;
+        handles.img_ext = ext;
+        handles.folder_name = pathstr;
         guidata(hObject, handles);
         helpdlg('Proceed with the query by executing the green button!');
         
@@ -113,7 +127,7 @@ if (query_fname ~= 0)
         clear('query_fname', 'query_pathname', 'query_fullpath', 'pathstr', ...
             'name', 'ext', 'queryImage', 'hsvHist', 'autoCorrelogram', ...
             'color_moments', 'img', 'meanAmplitude', 'msEnergy', ...
-            'wavelet_moments', 'queryImageFeature');
+            'wavelet_moments', 'queryImageFeature', 'imgInfo');
     else
         errordlg('You have not selected the correct file type');
     end
@@ -210,11 +224,11 @@ else
 end
 
 if (metric == 1)
-    L1(numOfReturnedImgs, handles.queryImageFeature, handles.imageDataset.dataset);
+    L1(numOfReturnedImgs, handles.queryImageFeature, handles.imageDataset.dataset, handles.folder_name, handles.img_ext);
 elseif (metric == 2 || metric == 3 || metric == 4 || metric == 5 || metric == 6  || metric == 7 || metric == 8 || metric == 9 || metric == 10 || metric == 11)
-    L2(numOfReturnedImgs, handles.queryImageFeature, handles.imageDataset.dataset, metric);
+    L2(numOfReturnedImgs, handles.queryImageFeature, handles.imageDataset.dataset, metric, handles.folder_name, handles.img_ext);
 else
-    relativeDeviation(numOfReturnedImgs, handles.queryImageFeature, handles.imageDataset.dataset);
+    relativeDeviation(numOfReturnedImgs, handles.queryImageFeature, handles.imageDataset.dataset, handles.folder_name, handles.img_ext);
 end
 
 
@@ -240,7 +254,7 @@ numOfReturnedImgs = get(handles.popupmenu_NumOfReturnedImages, 'Value');
 metric = get(handles.popupmenu_DistanceFunctions, 'Value');
 
 % call svm function passing as parameters the numOfReturnedImgs, queryImage and the dataset
-[~, ~, cmat] = svm(numOfReturnedImgs, handles.imageDataset.dataset, handles.queryImageFeature, metric);
+[~, ~, cmat] = svm(numOfReturnedImgs, handles.imageDataset.dataset, handles.queryImageFeature, metric, handles.folder_name, handles.img_ext);
 
 % plot confusion matrix
 opt = confMatPlot('defaultOpt');
@@ -289,7 +303,7 @@ for k = 1:15
     % for gabor filters we need gary scale image
     img = double(rgb2gray(queryImage))/255;
     [meanAmplitude, msEnergy] = gaborWavelet(img, 4, 6); % 4 = number of scales, 6 = number of orientations
-    wavelet_moments = waveletTransform(queryImage);
+    wavelet_moments = waveletTransform(queryImage, imgInfo.ColorType);
     % construct the queryImage feature vector
     queryImageFeature = [hsvHist autoCorrelogram color_moments meanAmplitude msEnergy wavelet_moments randImgName];
     
@@ -389,6 +403,12 @@ if ( ~isempty( jpg_files ) || ~isempty( png_files ) || ~isempty( bmp_files ) )
                 sprintf('%s \n', bmp_files(bmp_counter+1).name)
                 % extract features
                 image = imread( fullfile( handles.folder_name, bmp_files(bmp_counter+1).name ) );
+                handle = image(image);
+                imgmodel = imagemodel(handle);
+                str = getImageType(imgmodel);
+                disp([str])
+                return;
+
                 [pathstr, name, ext] = fileparts( fullfile( handles.folder_name, bmp_files(bmp_counter+1).name ) );
                 image = imresize(image, [384 256]);
             end
@@ -397,15 +417,36 @@ if ( ~isempty( jpg_files ) || ~isempty( png_files ) || ~isempty( bmp_files ) )
             
         end
         
-        hsvHist = hsvHistogram(image);
-        autoCorrelogram = colorAutoCorrelogram(image);
-        color_moments = colorMoments(image);
-        % for gabor filters we need gary scale image
-        img = double(rgb2gray(image))/255;
-        [meanAmplitude, msEnergy] = gaborWavelet(img, 4, 6); % 4 = number of scales, 6 = number of orientations
-        wavelet_moments = waveletTransform(image);
-        % construct the dataset
-        set = [hsvHist autoCorrelogram color_moments meanAmplitude msEnergy wavelet_moments];
+        switch (ext)
+            case '.jpg'
+                imgInfo = imgInfoJPG;
+            case '.png'
+                imgInfo = imgInfoPNG;
+            case '.bmp'
+                imgInfo = imgInfoBMP;
+        end
+        
+        if (strcmp(imgInfo.ColorType, 'grayscale') == 1)
+            grayHist = imhist(image);
+            grayHist = grayHist/sum(grayHist);
+            grayHist = grayHist(:)';
+            color_moments = [mean(mean(image)) std(std(double(image)))];
+            [meanAmplitude, msEnergy] = gaborWavelet(image, 4, 6); % 4 = number of scales, 6 = number of orientations
+            wavelet_moments = waveletTransform(image, imgInfo.ColorType);
+            % construct the dataset
+            set = [grayHist color_moments meanAmplitude msEnergy wavelet_moments];
+        elseif (strcmp(imgInfo.ColorType, 'truecolor') == 1)
+            hsvHist = hsvHistogram(image);
+            autoCorrelogram = colorAutoCorrelogram(image);
+            color_moments = colorMoments(image);
+            % for gabor filters we need gray scale image
+            img = double(rgb2gray(image))/255;
+            [meanAmplitude, msEnergy] = gaborWavelet(img, 4, 6); % 4 = number of scales, 6 = number of orientations
+            wavelet_moments = waveletTransform(image, imgInfo.ColorType);
+            % construct the dataset
+            set = [hsvHist autoCorrelogram color_moments meanAmplitude msEnergy wavelet_moments];
+        end
+
         % add to the last column the name of image file we are processing at
         % the moment
         dataset(k, :) = [set str2num(name)];
@@ -413,7 +454,7 @@ if ( ~isempty( jpg_files ) || ~isempty( png_files ) || ~isempty( bmp_files ) )
         % clear workspace
         clear('image', 'img', 'hsvHist', 'autoCorrelogram', 'color_moments', ...
             'gabor_wavelet', 'wavelet_moments', 'set', 'imgInfoJPG', 'imgInfoPNG', ...
-            'imgInfoGIF');
+            'imgInfoGIF', 'imgInfo');
     end
     
     % prompt to save dataset

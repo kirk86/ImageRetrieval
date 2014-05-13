@@ -71,20 +71,22 @@ function colors_percent = correlogram(photo, Cm, K)
     [X, Y, ttt] = size(photo);
     colors_percent = [];
  
-    for k = 1:K
+%     for k = 1:length(K) % loop over distances
+    for k = 1:K % loop over distances
         countColor = 0;
  
         color = zeros(1, length(Cm));
  
-        for x = 2:floor(X/10):X
-           for y = 2:floor(Y/10):Y
+        for x = 2:floor(X/10):X % loop over image width
+           for y = 2:floor(Y/10):Y % loop over image height
                Ci = photo(x, y);
+%                Cn = get_neighbors(X, Y, x, y, K(k));
                Cn = get_neighbors(X, Y, x, y, k);
  
-               for jj = 1:length(Cn)
+               for jj = 1:length(Cn) % loop over neighbor pixels
                    Cj = photo( Cn{1, jj}(1), Cn{1, jj}(2) );
  
-                   for m = 1:length(Cm)
+                   for m = 1:length(Cm) % loop over map colors
                        if isequal(Cm(m), Ci) && isequal(Cm(m), Cj)
                            countColor = countColor + 1;
                            color(m) = color(m) + 1;
