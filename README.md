@@ -14,3 +14,5 @@ If you don't have any images you can use the wang dataset which is the one I use
 You can download it from here: http://wang.ist.psu.edu/docs/related/
 
 For a more detailed description checkout "reference.pdf"
+
+For an even more detailed description have a look at **http://arxiv.org/abs/1608.03811**
