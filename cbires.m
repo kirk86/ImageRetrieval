@@ -368,6 +368,8 @@ if ( ~isempty( jpg_files ) || ~isempty( png_files ) || ~isempty( bmp_files ) )
     jpg_counter = 0;
     png_counter = 0;
     bmp_counter = 0;
+    oldHisv = 0;
+    oldautoCorrelogram = 0;
     for k = 1:totalImages
         
         if ( (num_of_jpg_images - jpg_counter) > 0)
@@ -436,8 +438,16 @@ if ( ~isempty( jpg_files ) || ~isempty( png_files ) || ~isempty( bmp_files ) )
             % construct the dataset
             set = [grayHist color_moments meanAmplitude msEnergy wavelet_moments];
         elseif (strcmp(imgInfo.ColorType, 'truecolor') == 1)
-            hsvHist = hsvHistogram(image);
-            autoCorrelogram = colorAutoCorrelogram(image);
+            hsvHist = 0;
+            try
+                hsvHist = hsvHistogram(image);
+                autoCorrelogram = colorAutoCorrelogram(image);
+                oldHisv = hsvHist;
+                oldautoCorrelogram = autoCorrelogram;
+            catch
+                hsvHist = oldHisv;
+                autoCorrelogram = oldautoCorrelogram;
+            end
             color_moments = colorMoments(image);
             % for gabor filters we need gray scale image
             img = double(rgb2gray(image))/255;
