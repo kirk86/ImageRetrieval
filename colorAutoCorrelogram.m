@@ -19,7 +19,13 @@ clear('img_no_dither');
 distances = [1 3 5 7];
 
 colorAutoCorrelogram = correlogram(rgb, map, distances);
-colorAutoCorrelogram = reshape(colorAutoCorrelogram, [4 4 4]);
+% For some images like documents, its colorAutoCorrelogram contains less than 64.
+% It is a compromise.
+colorAutoCorrelogramFix = zeros(1,64);
+for i = 1, size(colorAutoCorrelogram, 2)
+    colorAutoCorrelogramFix(i) = colorAutoCorrelogram(i);
+end
+colorAutoCorrelogram = reshape(colorAutoCorrelogramFix, [4 4 4]);
 
 % consturct final correlogram using distances
 colorAutoCorrelogram(:, :, 1) = colorAutoCorrelogram(:, :, 1)*distances(1);
