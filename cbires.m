@@ -22,7 +22,7 @@ function varargout = cbires(varargin)
 
 % Edit the above text to modify the response to help cbires
 
-% Last Modified by GUIDE v2.5 23-May-2013 22:01:15
+% Last Modified by GUIDE v2.5 18-May-2014 21:53:08
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -283,16 +283,22 @@ if (~isfield(handles, 'imageDataset'))
 end
 
 % set variables
-numOfReturnedImgs = 20;
 database = handles.imageDataset.dataset;
 metric =  get(handles.popupmenu_DistanceFunctions, 'Value');
 
-precAndRecall = zeros(2, 10);
+N = 15;
+precAndRecall = zeros(2, N);
+% sensitivitySpecificity = zeros(2, N);
+% fpr_fnr = zeros(2, N);
+finPrecRecall = zeros(2, M);
 
-for k = 1:15
+
+for k = 1:N
+    fprintf('---------------------- loop %d ----------------------\n', k);
     randImgName = randi([0 999], 1);
     randStrName = int2str(randImgName);
-    randStrName = strcat('images\', randStrName, '.jpg');
+    randStrName = strcat(handles.folder_name, '\', randStrName, handles.img_ext);
+    imgInfo = imfinfo(randStrName);
     randQueryImg = imread(randStrName);
     
     % extract query image features
@@ -307,17 +313,56 @@ for k = 1:15
     % construct the queryImage feature vector
     queryImageFeature = [hsvHist autoCorrelogram color_moments meanAmplitude msEnergy wavelet_moments randImgName];
     
-    disp(['Random Image = ', num2str(randImgName), '.jpg']);
-    [precision, recall] = svm(numOfReturnedImgs, database, queryImageFeature, metric);
+    disp(['Random Image = ', num2str(randImgName), handles.img_ext]);
+    [~, ~, cmat] = svm(handles.numOfReturnedImages, database, queryImageFeature, metric, handles.folder_name, handles.img_ext);
+    label = checkImageLabel(randImgName);
+    fprintf('label = %d\n', label);
+    % conf_table = [tp, fp;
+    %               fn, tn]
+    conf_table = convertConfusionTable(cmat, label);
+    % precision = tp/tp+fp
+    % recall = tp/tp+fn
+    precision = conf_table(1, 1)/(conf_table(1, 1) + conf_table(1, 2));
+    recall = conf_table(1, 1)/(conf_table(1, 1) + conf_table(2, 1));
+    %     sensitivity = recall;
+    %     specificity = conf_table(2, 2)/(conf_table(1, 2) + conf_table(2, 2));
+    %     fpr = 1-specificity;
+    %     fnr = 1-sensitivity;
     precAndRecall(1, k) = precision;
     precAndRecall(2, k) = recall;
+    %     sensitivitySpecificity(1, k) = sensitivity;
+    %     sensitivitySpecificity(2, k) = specificity;
+    %     fpr_fnr(1, k) = fpr;
+    %     fpr_fnr(2, k) = fnr;
+    fprintf('---------------------- loop %d ----------------------\n', k);
 end
+finPrecRecall(1, m) = mean(precAndRecall(1, :), 2);
+finPrecRecall(2, m) = mean(precAndRecall(2, :), 2);
 
 figure;
-plot(precAndRecall(2, :), precAndRecall(1, :), '--mo');
+plot(finPrecRecall(1, :), '--co');
+hold on;
+plot(finPrecRecall(2, :), '--r*');
 xlabel('Recall'), ylabel('Precision');
 title('Precision and Recall');
-legend('Recall & Precision', 'Location', 'NorthWest');
+legend('Precision', 'Recal', 'Location', 'NorthWest');
+% axis([0 N 0 1]);
+
+% figure;
+% plot(sensitivitySpecificity(1, :), '--co')
+% hold on;
+% plot(sensitivitySpecificity(2, :), '--r*');
+% xlabel('Specificity'), ylabel('Sensitivity');
+% title('Sensitivity and Specificity');
+% legend('Sensitivity', 'Specificity', 'Location', 'NorthWest');
+% 
+% figure;
+% plot(fpr_fnr(1, :), '--co')
+% hold on;
+% plot(fpr_fnr(2, :), '--r*');
+% xlabel('False negative rate'), ylabel('False positive rate');
+% title('Fpr and Fnr');
+% legend('Fpr', 'Fnr', 'Location', 'NorthWest');
 
 
 % --- Executes on button press in btnSelectImageDirectory.
